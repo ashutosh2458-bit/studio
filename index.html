@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Studio (C++ / WebAssembly)</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--fg:#16181d;--mute:#5d6471;--line:#e2e5ea;--acc:#4f46e5;--accfg:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1013;--panel:#171a20;--fg:#eceef2;--mute:#9aa1ae;--line:#2a2e37;--acc:#818cf8;--accfg:#10121a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0;flex:1}
+.badge{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
+.wrap{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 56px)}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow:auto}
+main{padding:16px;min-width:0}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:18px 0 8px}
+h2:first-child{margin-top:0}
+label{display:block;margin:8px 0 3px;font-size:12px;color:var(--mute)}
+input[type=text],textarea,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit}
+textarea{resize:vertical;min-height:70px}
+input[type=color]{width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{display:flex;gap:6px;align-items:center;margin:6px 0;color:var(--fg);font-size:13px}
+button,.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:7px 12px;border-radius:8px;text-decoration:none;display:inline-block}
+button.p,.btn.p{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.tabs .sp{flex:1}
+.tabs button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.frame{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 auto;transition:width .2s}
+iframe{width:100%;height:640px;border:0;display:block;background:#fff}
+pre{margin:0;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:600px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace}
+.hide{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;max-width:720px}
+.card p{color:var(--mute);margin:6px 0 10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+ol{padding-left:20px;margin:8px 0}ol li{margin:8px 0}
+code{font:12px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padding:1px 5px;border-radius:5px}
+.err{background:#fee2e2;color:#7f1d1d;padding:12px 16px;border-radius:10px;margin:16px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+@media(max-width:820px){.wrap{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header><h1>Design Studio</h1><span class="badge" id="status">Loading C++ core…</span></header>
+<div id="err" class="err hide"></div>
+<div class="wrap">
+<aside>
+<h2>Layout</h2>
+<select id="layout"><option value="landing">Landing page (centered hero)</option><option value="split">Split hero</option><option value="portfolio">Portfolio grid</option></select>
+<h2>Content</h2>
+<label>Brand name</label><input type="text" id="brand" value="Northwind Capital">
+<label>Headline</label><input type="text" id="headline" value="Smarter money moves, made simple">
+<label>Subtext</label><textarea id="sub">Clear advice, transparent fees and tools that help your finances grow with confidence.</textarea>
+<label>Button text</label><input type="text" id="btn" value="Book a free call">
+<label>Features (Title | description, one per line)</label>
+<textarea id="feat" style="min-height:90px">Plan | Build a roadmap around your goals.
+Invest | Diversified portfolios, reviewed quarterly.
+Protect | Insurance and tax strategy that fits you.</textarea>
+<h2>Style</h2>
+<div class="row"><div><label>Accent</label><input type="color" id="acc" value="#4f46e5"></div>
+<div><label>Font</label><select id="font"><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option></select></div></div>
+<div class="row"><div><label>Corners</label><select id="rad"><option value="0">Sharp</option><option value="8" selected>Soft</option><option value="18">Round</option><option value="999">Pill buttons</option></select></div>
+<div><label>Theme</label><select id="dark"><option value="0">Light</option><option value="1">Dark</option></select></div></div>
+<h2>Sections</h2>
+<label class="chk"><input type="checkbox" id="f1" checked> Navigation bar</label>
+<label class="chk"><input type="checkbox" id="f2" checked> Features</label>
+<label class="chk"><input type="checkbox" id="f4" checked> Testimonial</label>
+<label class="chk"><input type="checkbox" id="f8" checked> Call to action</label>
+<label class="chk"><input type="checkbox" id="f16" checked> Footer</label>
+</aside>
+<main>
+<div class="tabs">
+<button data-t="prev" class="on">Preview</button><button data-t="code">Export code</button><button data-t="team">Team &amp; GitHub</button>
+<span class="sp"></span>
+<span id="devs"><button data-w="100%" class="on">Desktop</button> <button data-w="768px">Tablet</button> <button data-w="390px">Phone</button></span>
+</div>
+
+<div id="prev" class="frame"><iframe id="fr" title="Preview"></iframe></div>
+
+<div id="code" class="hide">
+<div class="tabs">
+<button data-k="full" class="on">Single file (HTML + CSS)</button><button data-k="linked">index.html</button><button data-k="css">style.css</button>
+<span class="sp"></span><button class="p" id="copy">Copy</button><button class="p" id="dl">Download</button>
+</div>
+<pre id="pre"></pre>
+</div>
+
+<div id="team" class="hide">
+<div class="card">
+<b>Collaborate with friends through GitHub</b>
+<p>Fill in the details; the buttons below open the right GitHub pages. This app never asks for your password or token.</p>
+<div class="row"><div><label>Your GitHub username</label><input type="text" id="owner" placeholder="your-username"></div>
+<div><label>Repository name</label><input type="text" id="repo" placeholder="my-website"></div></div>
+<label>Friend's GitHub username (for the invite message)</label><input type="text" id="friend" placeholder="friend-username">
+<div class="btns">
+<a class="btn p" id="gh_new" target="_blank" rel="noopener">1. Create repository</a>
+<a class="btn p" id="gh_file" target="_blank" rel="noopener">2. Add design to repo</a>
+<a class="btn p" id="gh_inv" target="_blank" rel="noopener">3. Invite friends</a>
+<button id="cpmsg">Copy invite message</button>
+</div>
+<b>Recommended teamwork flow</b>
+<ol>
+<li><b>Invite:</b> on the invite page click “Add people”, search your friend's username, choose a role (Write lets them push). They accept by email or GitHub notification.</li>
+<li><b>Work on branches:</b> each person edits on their own branch so nobody overwrites anyone. Commands for your friend:
+<pre id="cmds" style="margin-top:6px;max-height:none"></pre></li>
+<li><b>Review:</b> open a Pull Request on GitHub, let others comment, then merge to <code>main</code>.</li>
+<li><b>Publish free:</b> repo Settings → Pages → Source: “GitHub Actions” (the included workflow builds and deploys this app), or Source: “Deploy from a branch” for plain exported HTML.</li>
+</ol>
+<p>Tip: “Add design to repo” puts your code in a new <code>index.html</code>. If the repo already has one, GitHub will ask you to edit that file instead.</p>
+</div>
+</div>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="design_core.js"></script>
+<script>
+var $=function(i){return document.getElementById(i)};
+var core=null,view="full",out={full:"",linked:"",css:""};
+
+function fail(m){$("err").textContent=m;$("err").classList.remove("hide");$("status").textContent="Core not loaded"}
+if(typeof createCore!=="function"){fail("design_core.js was not found. Build the C++ core first by running ./build.sh (see README.md).")}
+else createCore().then(function(M){
+  core={
+    build:M.cwrap("build_design",null,["string","string","string","string","string","string","string","string","number","number","number","number"]),
+    full:M.cwrap("get_full","string",[]),css:M.cwrap("get_css","string",[]),linked:M.cwrap("get_linked","string",[]),
+    newRepo:M.cwrap("github_new_repo_url","string",["string"]),
+    file:M.cwrap("github_file_url","string",["string","string","string","string"]),
+    invite:M.cwrap("github_invite_url","string",["string","string"])
+  };
+  $("status").textContent="C++ core ready (WebAssembly)";render();
+}).catch(function(e){fail("Could not start the WebAssembly core: "+e)});
+
+function flags(){var f=0;[1,2,4,8,16].forEach(function(b){if($("f"+b).checked)f|=b});return f}
+function render(){
+  if(!core)return;
+  core.build($("layout").value,$("brand").value,$("headline").value,$("sub").value,$("btn").value,$("feat").value,$("acc").value,$("font").value,+$("rad").value,+$("dark").value,flags(),new Date().getFullYear());
+  out.full=core.full();out.css=core.css();out.linked=core.linked();
+  $("fr").srcdoc=out.full;$("pre").textContent=out[view];
+  var o=$("owner").value.trim(),r=$("repo").value.trim(),ready=o&&r;
+  $("gh_new").href=core.newRepo(r);
+  $("gh_file").href=ready?core.file(o,r,"index.html",out.full):"https://github.com/new";
+  $("gh_inv").href=ready?core.invite(o,r):"https://github.com/settings/organizations";
+  $("cmds").textContent=["git clone https://github.com/"+(o||"OWNER")+"/"+(r||"REPO")+".git","cd "+(r||"REPO"),"git checkout -b my-design-change","# edit index.html, then:","git add .",'git commit -m "Update design"',"git push -u origin my-design-change"].join("\n");
+}
+document.addEventListener("input",render);document.addEventListener("change",render);
+
+function toast(m){var t=$("toast");t.textContent=m;t.classList.add("on");setTimeout(function(){t.classList.remove("on")},1600)}
+function copy(txt,msg){if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){toast(msg)},fb);else fb();
+  function fb(){var a=document.createElement("textarea");a.value=txt;document.body.appendChild(a);a.select();try{document.execCommand("copy");toast(msg)}catch(e){toast("Select and copy manually")}a.remove()}}
+
+document.querySelectorAll("[data-t]").forEach(function(b){b.onclick=function(){
+  document.querySelectorAll("[data-t]").forEach(function(x){x.classList.toggle("on",x===b)});
+  ["prev","code","team"].forEach(function(i){$(i).classList.toggle("hide",i!==b.dataset.t)});
+  $("devs").style.visibility=b.dataset.t==="prev"?"visible":"hidden"}});
+document.querySelectorAll("[data-w]").forEach(function(b){b.onclick=function(){
+  document.querySelectorAll("[data-w]").forEach(function(x){x.classList.toggle("on",x===b)});$("prev").style.width=b.dataset.w}});
+document.querySelectorAll("[data-k]").forEach(function(b){b.onclick=function(){
+  view=b.dataset.k;document.querySelectorAll("[data-k]").forEach(function(x){x.classList.toggle("on",x===b)});$("pre").textContent=out[view]}});
+$("copy").onclick=function(){copy(out[view],"Code copied")};
+$("dl").onclick=function(){
+  var name=view==="css"?"style.css":"index.html",type=view==="css"?"text/css":"text/html";
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([out[view]],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove();
+  if(view==="linked")toast("Also download style.css and keep both files together")};
+$("cpmsg").onclick=function(){var o=$("owner").value.trim()||"me",r=$("repo").value.trim()||"my-website",f=$("friend").value.trim();
+  copy("Hi"+(f?" @"+f:"")+"! I've invited you to collaborate on our website design: https://github.com/"+o+"/"+r+"\nAccept the invite from your GitHub email or notifications, create a branch, and open a pull request with your changes.","Message copied")};
+$("devs").style.visibility="visible";
+</script>
+</body>
+</html>
